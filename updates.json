@@ -6,12 +6,7 @@
             "version":     "1.1",
             "update_link": "",
             "update_hash": ""
-          },
-           {
-             "version":     "1.2.0",
-             "update_link": "https://raw.githubusercontent.com/MohsenUSA/product_lookup/main/updates.json",
-             "update_hash": ""
-           }
+          }
         ]
       }
     }
