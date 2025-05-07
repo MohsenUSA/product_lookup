@@ -7,6 +7,8 @@
 // @match        *://*.amazon.*/*
 // @grant        GM_registerMenuCommand
 // @require      https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js
+// @downloadURL  https://raw.githubusercontent.com/MohsenUSA/product_lookup/main/DAD_PLU_iPhone.userscript.js
+// @updateURL    https://raw.githubusercontent.com/MohsenUSA/product_lookup/main/DAD_PLU_iPhone.userscript.js
 // ==/UserScript==
 
 (function () {
