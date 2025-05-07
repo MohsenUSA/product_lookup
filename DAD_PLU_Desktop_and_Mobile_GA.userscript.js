@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         DAD PLU (Desktop & Mobile) GA
 // @namespace    https://dad.mohajiho.com/
-// @version      0.1
+// @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
+// @version      1.1
 // @description  Find ASINs & product info, generate QR in a popup, and send GA4 events (script_loaded + per‑button analytics).
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -256,7 +257,7 @@
             engagement_time_msec: 1,
             page_location: location.href,
             page_title: document.title,
-            script_name: 'DAD PLU v0.1'
+            script_name: 'DAD PLU v1.1'
           }
         }]
       })
@@ -397,7 +398,7 @@
             gtag('event', btn, {
               debug_mode: true,
               page_location: 'https://dad.mohajiho.com/popup',
-              script_name: 'DAD PLU v0.1'
+              script_name: 'DAD PLU v1.1'
             });
           }
         }
