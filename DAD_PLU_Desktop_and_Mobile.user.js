@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
-// @author       Mohsen Hajihosseinnejad (alias MOHAJIHO / mohajiho@gmail.com)
+// @author       Mohsen Hajihosseinnejad * alias MOHAJIHO * mohajiho@gmail.com
 // @version      2.2
 // @description  Find ASINs & product info, generate QR in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
