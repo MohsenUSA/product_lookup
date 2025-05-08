@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad (alias MOHAJIHO / mohajiho@gmail.com)
-// @version      1.1
+// @version      2.0
 // @description  Find ASINs & product info, generate QR in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -17,24 +17,24 @@
 
 (function () {
     'use strict';
-  
+
     /* ----------------- USER‑EDITABLE HOTKEY -----------------
        • Change any of the properties below to suit your combo.
        • key is case‑insensitive (so 'l' or 'L' are both fine).   */
     const HOTKEY = {
-      key:   'L',   // main key
-      shift: true,
+      key:   'L', // suffix
+      shift: true, // modifier
       ctrl:  false,
       alt:   false,
-      meta:  false  // ⌘ on macOS, Windows key on Windows
+      meta:  false // ⌘ on macOS, Windows key on Windows
     };
-  
+
     /* -------------- Load Material Icons font -------------- */
     const iconLink = document.createElement('link');
     iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
     iconLink.rel = 'stylesheet';
     document.head.appendChild(iconLink);
-  
+
     /* ------------------------- CONFIG ------------------------ */
     const CONFIG = {
       asinContainers: ['.a-size-base.prodDetAttrValue'],
@@ -66,7 +66,7 @@
       savingsMessageSelector: '[id^="promoMessage"]',
       savingsLabelSelector: "label[for^='checkbox']"
     };
-  
+
     /* ------------------ scrape current page ------------------ */
     function findPatternInPage() {
       /* Title */
@@ -76,7 +76,7 @@
         document.querySelector('[data-csa-c-content-id="title"]') ||
         document.querySelector('#title');
       if (titleEl) productTitle = titleEl.textContent.trim();
-  
+
       /* ASINs */
       let codes = [];
       document.querySelectorAll(CONFIG.asinContainers.join(',')).forEach(el => {
@@ -87,30 +87,29 @@
         const all = document.body.innerText.match(CONFIG.pageTextRegex) || [];
         codes = [...new Set(all)];
       }
-  
+
       /* Availability */
       let availability = '';
       const availEl = document.querySelector(CONFIG.availabilitySelectors.join(','));
       if (availEl) {
         const t = availEl.textContent.trim();
-        if (/low stock\s*[–-]\s*order soon/i.test(t))      availability = 'Low Stock';
-        else if (/in stock/i.test(t))                      availability = 'In Stock';
-        else if (/currently unavailable|out of stock/i.test(t))
-                                                          availability = 'Out of Stock';
+        if (/low stock\s*[–-]\s*order soon/i.test(t)) availability = 'Low Stock';
+        else if (/in stock/i.test(t)) availability = 'In Stock';
+        else if (/currently unavailable|out of stock/i.test(t)) availability = 'Out of Stock';
         else availability = t;
       }
-  
+
       /* Prices */
       let discount = '', promoPrice = '', regularPrice = '';
       const dEl = document.querySelector(CONFIG.discountSelector);
       const pEl = document.querySelector(CONFIG.promoPriceSelector);
       const rEl = document.querySelector(CONFIG.regularPriceSelector);
-      const fb  = document.querySelector(CONFIG.fallbackPriceSelector);
+      const fb = document.querySelector(CONFIG.fallbackPriceSelector);
       if (dEl) discount = dEl.textContent.trim();
       if (pEl) promoPrice = pEl.textContent.trim();
       if (rEl) regularPrice = rEl.textContent.trim();
       if (!promoPrice && fb) promoPrice = fb.textContent.trim();
-  
+
       /* Prime exclusive / typical */
       let primeExclusivePrice = '', typicalPrice = '';
       document.querySelectorAll(CONFIG.primeContainerSelectors.join(','))
@@ -124,7 +123,7 @@
             if (tp) typicalPrice = tp.textContent.trim();
           }
         });
-  
+
       /* Unit price */
       let unitPrice = '';
       for (const sel of CONFIG.unitSelectors) {
@@ -135,17 +134,17 @@
         const m = el.innerText.replace(/\s+/g, ' ').match(CONFIG.unitRegex);
         if (m) { unitPrice = `($${m[1]} / ${m[2].trim()})`; break; }
       }
-  
+
       /* SNAP EBT */
       const snapEbtStatus = CONFIG.snapTextRegex.test(document.body.innerText)
         ? 'SNAP EBT eligible'
         : 'NOT SNAP EBT eligible';
-  
+
       /* Savings promo */
       let savingsText = '', savingsLink = '';
       try {
         const promoMsg = document.querySelector(CONFIG.savingsMessageSelector);
-        const label    = document.querySelector(CONFIG.savingsLabelSelector);
+        const label = document.querySelector(CONFIG.savingsLabelSelector);
         if ((label && label.textContent.trim() === 'Savings') ||
             (!label && /Savings/i.test(promoMsg?.textContent || ''))) {
           if (promoMsg) {
@@ -158,7 +157,7 @@
           }
         }
       } catch {/* ignore */}
-  
+
       return {
         codes,
         productTitle,
@@ -174,12 +173,12 @@
         savingsLink
       };
     }
-  
+
     /* ------------------ build popup HTML ------------------ */
     function buildInnerHTML(data) {
       let html = `<div id="gm-asin-panel">
         <h3>Found ${data.codes.length} ASIN${data.codes.length > 1 ? 's':''}</h3>`;
-  
+
       data.codes.forEach(code => {
         html += `<div class="qr-item">`;
         if (data.codes.length === 1 && data.productTitle) {
@@ -188,7 +187,7 @@
         html += `
           <div class="qr-code-container" id="qr-${code}"></div>
           <p class="code-text">ASIN: ${code}</p>`;
-  
+
         if (data.codes.length === 1) {
           /* single‑ASIN extras */
           if (data.availability) {
@@ -227,7 +226,7 @@
         }
         html += `</div>`;
       });
-  
+
       /* footer buttons */
       html += `<div class="footer">
         <button id="support-btn"   class="btn support-btn"   title="Support Info"><i class="material-icons">contact_support</i><span class="tooltiptext"></span></button>
@@ -240,11 +239,11 @@
     </div>`;
       return html;
     }
-  
+
     /* ----------- Google Analytics via Measurement Protocol ----------- */
-    const measurementId = 'G-MLS2KFS6R9';      // ← your GA4 ID
-    const apiSecret     = 'M4MfavQ3QSuVH7Bz_b6MBA';   // ← your secret
-  
+    const measurementId = 'G-MLS2KFS6R9'; // ← your GA4 ID
+    const apiSecret = 'M4MfavQ3QSuVH7Bz_b6MBA'; // ← your secret
+
     function getClientId() {
       let cid = localStorage.getItem('ga4_client_id');
       if (!cid) {
@@ -268,7 +267,7 @@
               engagement_time_msec: 1,
               page_location: location.href,
               page_title: document.title,
-              script_name: 'DAD PLU v1.1'
+              script_name: 'DAD PLU v2.0'
             }
           }]
         })
@@ -276,21 +275,21 @@
     }
     /* fire once on userscript load */
     sendMPEvent('script_loaded');
-  
+
     /* ----------------- main: open popup tab ----------------- */
     function scanPage() {
       const data = findPatternInPage();
       if (!data.codes.length) { alert('No ASINs found!'); return; }
-  
+
       const desktopWidth = Math.min(window.innerWidth || 400, 460);
       const win = window.open(
         'about:blank',
         '_blank',
         `width=${desktopWidth},resizable=yes,scrollbars=yes`
       );
-      const doc  = win.document;
+      const doc = win.document;
       const json = JSON.stringify(data).replace(/</g,'\\u003c').replace(/-->/g,'\\u002d\\u002d>');
-  
+
       /* full popup CSS */
       const popupCSS = `
         body { margin:0; }
@@ -320,7 +319,7 @@
         .product-title { font-weight:bold; color:#0066c0; margin-bottom:12px; }
         .qr-code-container { display:flex; justify-content:center; margin:0 auto 10px; }
         .code-text { font-weight:bold; margin-bottom:10px; }
-  
+
         /* availability styles */
         .availability {
           font-size:18px; font-weight:bold;
@@ -330,7 +329,7 @@
         .in-stock    { background-color:#4caf50; }
         .low-stock   { background-color:#FFA500; }
         .out-of-stock{ background-color:#d9534f; }
-  
+
         .promo-price{ color:rgb(50,112,246); font-weight:bold; margin-bottom:6px; }
         .regular-price{ color:#555; margin-bottom:6px; }
         .discount-percentage{ color:#CC0C39; font-weight:bold; margin-bottom:6px; }
@@ -341,7 +340,7 @@
           background:#ccf1cd; padding:5px; border-radius:4px; margin-bottom:10px;
         }
         .savings-message a{ font-weight:bold; }
-  
+
         .footer{
           position:fixed; bottom:0; left:0; right:0;
           background:#fff; padding:10px; border-top:1px solid #ccc;
@@ -368,7 +367,7 @@
         .close-btn-bottom{ background:#d9534f; color:#fff; }
         .material-icons{ font-size:clamp(18px,5vw,22px); }
       `;
-  
+
       /* --------------------- GA4 gtag (debug) --------------------- */
       const gaTag = `
         <script async src="https://www.googletagmanager.com/gtag/js?id=${measurementId}"></script>
@@ -388,7 +387,7 @@
           });
         <\/script>
       `;
-  
+
       /* full popup HTML & JS */
       doc.write(`<!doctype html><html><head>
         <meta charset="utf-8">
@@ -402,25 +401,25 @@
         ${buildInnerHTML(data)}
         <script>
           const data = ${json};
-  
+
           /* helper to track button clicks */
           function track(btn){
             if(window.gtag){
               gtag('event', btn, {
                 debug_mode: true,
                 page_location: 'https://dad.mohajiho.com/popup',
-                script_name: 'DAD PLU v1.1'
+                script_name: 'DAD PLU v2.0'
               });
             }
           }
-  
+
           /* hide Copy‑QR for mobile UAs */
           const isMobile = /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent);
           if (isMobile) {
             const btn = document.querySelector('.copy-img-btn');
             if (btn) btn.style.display = 'none';
           }
-  
+
           /* resize window to fit content (desktop only) */
           window.addEventListener('load', () => {
             const h = document.documentElement.scrollHeight;
@@ -428,13 +427,13 @@
             if (data.codes.length > 1)
               document.getElementById('copy-all-btn').style.display = 'inline-flex';
           });
-  
+
           /* QR codes with responsive size */
           const qrSize = Math.max(160, Math.min(window.innerWidth * 0.4, 200));
           data.codes.forEach(c =>
             new QRCode(document.getElementById('qr-' + c), { text:c, width:qrSize, height:qrSize })
           );
-  
+
           /* support box */
           document.getElementById('support-btn').onclick = () => {
             track('support_opened');
@@ -450,7 +449,7 @@
             document.getElementById('close-support-btn').onclick = () => box.remove();
             showTooltip(document.getElementById('support-btn'), 'Opened');
           };
-  
+
           /* copy handlers */
           ['copy-img-btn','copy-btn','copy-asin-btn','copy-all-btn'].forEach(id => {
             const btn = document.getElementById(id);
@@ -487,9 +486,9 @@
               }
             };
           });
-  
+
           document.getElementById('close-btn-bottom').onclick = () => window.close();
-  
+
           function showTooltip(btn,msg){
             const tip = btn.querySelector('.tooltiptext');
             tip.textContent = msg;
@@ -501,10 +500,10 @@
       </body></html>`);
       doc.close();
     }
-  
+
     /* ---------------- Tampermonkey menu ---------------- */
     GM_registerMenuCommand('Scan ASINs', scanPage);
-  
+
     /* -------------- floating scan button & hotkey --------------- */
     if (!window.opener && !/about:blank/i.test(location.href)) {
       /* floating button */
@@ -513,7 +512,7 @@
         all:'initial', position:'fixed', top:0, left:0, width:0, height:0, zIndex:2147483647
       });
       document.documentElement.appendChild(host);
-  
+
       const shadow = host.attachShadow({mode:'closed'});
       shadow.innerHTML = `
         <style>
@@ -529,7 +528,7 @@
         <button id="gm-asin-btn" title="Scan ASINs">search</button>
       `;
       shadow.getElementById('gm-asin-btn').addEventListener('click', scanPage);
-  
+
       /* survive SPA navigation */
       const fireLocationChange = () => window.dispatchEvent(new Event('locationchange'));
       const _push = history.pushState;
@@ -537,28 +536,27 @@
       const _replace = history.replaceState;
       history.replaceState = function(){ _replace.apply(this,arguments); fireLocationChange(); };
       window.addEventListener('popstate', fireLocationChange);
-  
+
       /* --------------- global hotkey listener --------------- */
       function hotkeyMatches(e){
         return (
           e.key.toLowerCase() === HOTKEY.key.toLowerCase() &&
           e.shiftKey === HOTKEY.shift &&
-          e.ctrlKey  === HOTKEY.ctrl  &&
-          e.altKey   === HOTKEY.alt   &&
-          e.metaKey  === HOTKEY.meta
+          e.ctrlKey === HOTKEY.ctrl &&
+          e.altKey === HOTKEY.alt &&
+          e.metaKey === HOTKEY.meta
         );
       }
       window.addEventListener('keydown', e => {
         if (!hotkeyMatches(e)) return;
-  
+
         /* ignore if typing in input / textarea / contentEditable */
         const tgt = e.target;
         const tag = (tgt.tagName || '').toUpperCase();
         if (tgt.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
-  
+
         e.preventDefault();
         scanPage();
       });
     }
   })();
-  
