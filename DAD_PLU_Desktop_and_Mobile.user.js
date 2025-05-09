@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      2.2
+// @version      1.0
 // @description  Find ASINs & product info, generate QR in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -259,7 +259,7 @@
             engagement_time_msec: 1,
             page_location: location.href,
             page_title: document.title,
-            script_name: 'DAD PLU v2.2'
+            script_name: 'DAD PLU v1.0'
           }
         }]
       })
@@ -417,7 +417,7 @@ const win = window.open(
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v2.2'
+              script_name:'DAD PLU v1.0'
             });
           }
         }
@@ -501,7 +501,7 @@ const win = window.open(
   /* ---------------- Tampermonkey menu ---------------- */
   GM_registerMenuCommand('Scan ASINs', scanPage);
 
-  /* -------- floating scan button & hotkey -------- */
+    /* -------- floating scan button & hotkey -------- */
   if(!window.opener && !/about:blank/i.test(location.href)){
     const host=document.createElement('div');
     Object.assign(host.style,{all:'initial',position:'fixed',top:0,left:0,width:0,height:0,zIndex:2147483647});
@@ -514,8 +514,13 @@ const win = window.open(
           position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
           background:#4caf50;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
           cursor:pointer;display:flex;align-items:center;justify-content:center;
+          animation:gm-flash 3s linear infinite;
         }
         #gm-asin-btn:active{transform:scale(.95);}
+        @keyframes gm-flash{
+          0%,49%  {background:#4caf50;color:#fff;}
+          50%,100%{background:#fff;color:#4caf50;}
+        }
       </style>
       <button id="gm-asin-btn" title="Scan ASINs">search</button>
     `;
