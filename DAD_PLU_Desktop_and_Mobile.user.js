@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      1.0
+// @version      1.1
 // @description  Find ASINs & product info, generate QR in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -259,7 +259,7 @@
             engagement_time_msec: 1,
             page_location: location.href,
             page_title: document.title,
-            script_name: 'DAD PLU v1.0'
+            script_name: 'DAD PLU v1.1'
           }
         }]
       })
@@ -417,7 +417,7 @@ const win = window.open(
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v1.0'
+              script_name:'DAD PLU v1.1'
             });
           }
         }
@@ -519,10 +519,10 @@ const win = window.open(
         #gm-asin-btn:active{transform:scale(.95);}
         @keyframes gm-flash{
           0%,49%  {background:#4caf50;color:#fff;}
-          50%,100%{background:#fff;color:#4caf50;}
+          50%,100%{background:#05A0D1;color:#fff;}
         }
       </style>
-      <button id="gm-asin-btn" title="Scan ASINs">search</button>
+      <button id="gm-asin-btn" title="Start Scan">search</button>
     `;
     shadow.getElementById('gm-asin-btn').addEventListener('click',scanPage);
 
