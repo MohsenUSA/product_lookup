@@ -11,8 +11,8 @@
 // @grant        GM_xmlhttpRequest
 // @connect      https://www.google-analytics.com
 // @require      https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js
-// @downloadURL  https://github.com/MohsenUSA/product_lookup/main/DAD_PLU_Desktop_and_Mobile.user.js
-// @updateURL    https://github.com/MohsenUSA/product_lookup/main/DAD_PLU_Desktop_and_Mobile.user.js
+// @downloadURL  https://raw.githubusercontent.com/MohsenUSA/product_lookup/main/DAD_PLU_Desktop_and_Mobile.user.js
+// @updateURL    https://raw.githubusercontent.com/MohsenUSA/product_lookup/main/DAD_PLU_Desktop_and_Mobile.user.js
 // ==/UserScript==
 
 (function () {
