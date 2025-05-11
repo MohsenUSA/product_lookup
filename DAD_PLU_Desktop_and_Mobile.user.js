@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      1.1
+// @version      3.0
 // @description  Find ASINs & product info, generate QR in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -259,7 +259,7 @@
             engagement_time_msec: 1,
             page_location: location.href,
             page_title: document.title,
-            script_name: 'DAD PLU v1.1'
+            script_name: 'DAD PLU v3.0'
           }
         }]
       })
@@ -417,7 +417,7 @@ const win = window.open(
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v1.1'
+              script_name:'DAD PLU v3.0'
             });
           }
         }
@@ -498,32 +498,36 @@ const win = window.open(
     doc.close();
   }
 
-  /* ---------------- Tampermonkey menu ---------------- */
-  GM_registerMenuCommand('Scan ASINs', scanPage);
+    /* ---------------- Tampermonkey menu ---------------- */
+    GM_registerMenuCommand('Start Scan', scanPage);
 
     /* -------- floating scan button & hotkey -------- */
-  if(!window.opener && !/about:blank/i.test(location.href)){
-    const host=document.createElement('div');
-    Object.assign(host.style,{all:'initial',position:'fixed',top:0,left:0,width:0,height:0,zIndex:2147483647});
-    document.documentElement.appendChild(host);
+    if(!window.opener && !/about:blank/i.test(location.href)){
+        const host=document.createElement('div');
+        Object.assign(host.style,{all:'initial',position:'fixed',top:0,left:0,width:0,height:0,zIndex:2147483647});
+        document.documentElement.appendChild(host);
 
-    const shadow=host.attachShadow({mode:'closed'});
-    shadow.innerHTML=`
-      <style>
-        #gm-asin-btn{
-          position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
-          background:#4caf50;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
-          cursor:pointer;display:flex;align-items:center;justify-content:center;
-          animation:gm-flash 3s linear infinite;
-        }
-        #gm-asin-btn:active{transform:scale(.95);}
-        @keyframes gm-flash{
-          0%,49%  {background:#4caf50;color:#fff;}
-          50%,100%{background:#05A0D1;color:#fff;}
-        }
-      </style>
-      <button id="gm-asin-btn" title="Start Scan">search</button>
-    `;
+        const shadow=host.attachShadow({mode:'closed'});
+        shadow.innerHTML=`
+    <style>
+      #gm-asin-btn{
+        position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
+        background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
+        cursor:pointer;display:flex;align-items:center;justify-content:center;
+        animation:gm-color-shift 18s ease-in-out infinite;
+        transition:transform 0.2s ease-out;
+      }
+      #gm-asin-btn:active{transform:scale(.95);}
+      @keyframes gm-color-shift{
+        0% {background:#77bc1f;}
+        33% {background:#00a8e1;}
+        66% {background:#ffa700;}
+        100% {background:#77bc1f;}
+      }
+    </style>
+    <button id="gm-asin-btn" title="Start Scan">search</button>
+  `;
+
     shadow.getElementById('gm-asin-btn').addEventListener('click',scanPage);
 
     /* survive SPA nav */
