@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      3.0
+// @version      4.0
 // @description  Find ASINs & product info, generate QR in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -19,7 +19,7 @@
   'use strict';
 
   /* ----------------- USER‑EDITABLE HOTKEY ----------------- */
-  const HOTKEY = { key:'L', shift:true, ctrl:false, alt:false, meta:false };
+  const HOTKEY = { key: 'L', shift: true, ctrl: false, alt: false, meta: false };
 
   /* -------------- Load Material Icons font -------------- */
   const iconLink = document.createElement('link');
@@ -30,33 +30,40 @@
   /* ------------------------- CONFIG ------------------------ */
   const CONFIG = {
     asinContainers: ['.a-size-base.prodDetAttrValue'],
-    pageTextRegex:  /\bB[A-Z0-9]{9}\b/g,
+    pageTextRegex: /\bB(?=[A-Z0-9]{9}\b)(?=[A-Z]*\d)[A-Z0-9]{9}/g,
     unitSelectors: [
-      '#corePrice_desktop','#corePrice_desktop_feature_div','#corePrice_feature_div',
-      '#pickupPrice_feature_div','#corePriceDisplay_desktop_feature_div',
-      '#corePrice_mobile_feature_div','#corePriceDisplay_mobile_feature_div'
+      '#corePrice_desktop',
+      '#corePrice_desktop_feature_div',
+      '#corePrice_feature_div',
+      '#pickupPrice_feature_div',
+      '#corePriceDisplay_desktop_feature_div',
+      '#corePrice_mobile_feature_div',
+      '#corePriceDisplay_mobile_feature_div'
     ],
     unitRegex: /\(\s*\$([\d,.]+)(?:\s*\$[\d,.]+)?\s*\/\s*([^)]+)\)/,
     availabilitySelectors: [
-      '#availability .a-size-medium','#availability .a-color-success',
-      '#availability .a-color-state','#availability span',
-      '#availability-string .a-color-price','#availability-string .a-text-bold',
+      '#availability .a-size-medium',
+      '#availability .a-color-success',
+      '#availability .a-color-state',
+      '#availability span',
+      '#availability-string .a-color-price',
+      '#availability-string .a-text-bold',
       '#availability-string .a-size-medium.a-color-success',
       '#almOutOfStockAvailability_feature_div .a-color-state',
       '#almAvailability_feature_div .a-text-bold',
       '.a-section.a-spacing-medium .a-color-price'
     ],
-    discountSelector:         '.savingPriceOverride, .a-color-price.savingPriceOverride',
-    promoPriceSelector:       '.priceToPay .a-offscreen',
-    regularPriceSelector:     '.basisPrice .a-offscreen',
-    fallbackPriceSelector:    '#priceblock_ourprice',
-    primeContainerSelectors:  [
+    discountSelector: '.savingPriceOverride, .a-color-price.savingPriceOverride',
+    promoPriceSelector: '.priceToPay .a-offscreen',
+    regularPriceSelector: '.basisPrice .a-offscreen',
+    fallbackPriceSelector: '#priceblock_ourprice',
+    primeContainerSelectors: [
       '[id^="corePriceDisplay_desktop_feature_div"]',
       '[id^="corePriceDisplay_mobile_feature_div"]'
     ],
-    snapTextRegex:            /\bSNAP EBT eligible\b/i,
-    savingsMessageSelector:   '[id^="promoMessage"]',
-    savingsLabelSelector:     "label[for^='checkbox']"
+    snapTextRegex: /\bSNAP EBT eligible\b/i,
+    savingsMessageSelector: '[id^="promoMessage"]',
+    savingsLabelSelector: "label[for^='checkbox']"
   };
 
   /* ------------------ scrape current page ------------------ */
@@ -92,7 +99,9 @@
     }
 
     /* Prices */
-    let discount = '', promoPrice = '', regularPrice = '';
+    let discount = '',
+      promoPrice = '',
+      regularPrice = '';
     const dEl = document.querySelector(CONFIG.discountSelector);
     const pEl = document.querySelector(CONFIG.promoPriceSelector);
     const rEl = document.querySelector(CONFIG.regularPriceSelector);
@@ -103,8 +112,10 @@
     if (!promoPrice && fb) promoPrice = fb.textContent.trim();
 
     /* Prime exclusive / typical */
-    let primeExclusivePrice = '', typicalPrice = '';
-    document.querySelectorAll(CONFIG.primeContainerSelectors.join(','))
+    let primeExclusivePrice = '',
+      typicalPrice = '';
+    document
+      .querySelectorAll(CONFIG.primeContainerSelectors.join(','))
       .forEach(coreEl => {
         if (!primeExclusivePrice) {
           const pep = coreEl.querySelector('.priceToPay [aria-hidden="true"]');
@@ -124,7 +135,10 @@
       const st = getComputedStyle(el);
       if (st.display === 'none' || st.visibility === 'hidden') continue;
       const m = el.innerText.replace(/\s+/g, ' ').match(CONFIG.unitRegex);
-      if (m) { unitPrice = `($${m[1]} / ${m[2].trim()})`; break; }
+      if (m) {
+        unitPrice = `($${m[1]} / ${m[2].trim()})`;
+        break;
+      }
     }
 
     /* SNAP EBT */
@@ -133,12 +147,15 @@
       : 'NOT SNAP EBT eligible';
 
     /* Savings promo */
-    let savingsText = '', savingsLink = '';
+    let savingsText = '',
+      savingsLink = '';
     try {
       const promoMsg = document.querySelector(CONFIG.savingsMessageSelector);
       const label = document.querySelector(CONFIG.savingsLabelSelector);
-      if ((label && label.textContent.trim() === 'Savings') ||
-          (!label && /Savings/i.test(promoMsg?.textContent || ''))) {
+      if (
+        (label && label.textContent.trim() === 'Savings') ||
+        (!label && /Savings/i.test(promoMsg?.textContent || ''))
+      ) {
         if (promoMsg) {
           savingsText = Array.from(promoMsg.childNodes)
             .filter(n => n.nodeType === Node.TEXT_NODE)
@@ -148,7 +165,9 @@
           if (a) savingsLink = a.href;
         }
       }
-    } catch {/* ignore */}
+    } catch {
+      /* ignore */
+    }
 
     return {
       codes,
@@ -169,7 +188,7 @@
   /* ------------------ build popup HTML ------------------ */
   function buildInnerHTML(data) {
     let html = `<div id="gm-asin-panel">
-      <h3>Found ${data.codes.length} ASIN${data.codes.length > 1 ? 's':''}</h3>`;
+      <h3>Found ${data.codes.length} ASIN${data.codes.length > 1 ? 's' : ''}</h3>`;
 
     data.codes.forEach(code => {
       html += `<div class="qr-item">`;
@@ -209,7 +228,8 @@
           html += `<p class="discount-percentage">Discount: ${data.discount}</p>`;
         }
         const snapClass = data.snapEbtStatus.startsWith('SNAP')
-                         ? 'snap-eligible' : 'snap-not-eligible';
+          ? 'snap-eligible'
+          : 'snap-not-eligible';
         html += `<p class="${snapClass}">${data.snapEbtStatus}</p>`;
         if (data.savingsText) {
           html += `<p class="savings-message">Savings: "${data.savingsText}"<br>
@@ -224,8 +244,8 @@
       <button id="support-btn"   class="btn support-btn"   title="Support Info"><i class="material-icons">contact_support</i><span class="tooltiptext"></span></button>
       <button id="copy-img-btn"  class="btn copy-img-btn"  title="Copy QR Code Image"><i class="material-icons">qr_code</i><span class="tooltiptext"></span></button>
       <button id="copy-btn"      class="btn copy-btn"      title="Copy All Product Info"><i class="material-icons">content_copy</i><span class="tooltiptext"></span></button>
-      <button id="copy-asin-btn" class="btn copy-asin-btn" title="Copy ASIN"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
-      <button id="copy-all-btn"  class="btn copy-all-btn"  title="Copy All ASINs" style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
+      <button id="copy-asin-btn" class="btn copy-asin-btn" title="Copy ASIN"        style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
+      <button id="copy-all-btn"  class="btn copy-all-btn"  title="Copy All ASINs"   style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
       <button id="close-btn-bottom" class="btn close-btn-bottom" title="Close"><i class="material-icons">close</i></button>
     </div>
   </div>`;
@@ -244,7 +264,7 @@
     }
     return cid;
   }
-  function sendMPEvent(name='script_loaded') {
+  function sendMPEvent(name = 'script_loaded') {
     GM_xmlhttpRequest({
       method: 'POST',
       url: `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
@@ -252,16 +272,18 @@
       anonymous: true,
       data: JSON.stringify({
         client_id: getClientId(),
-        events: [{
-          name,
-          params: {
-            debug_mode: true,
-            engagement_time_msec: 1,
-            page_location: location.href,
-            page_title: document.title,
-            script_name: 'DAD PLU v3.0'
+        events: [
+          {
+            name,
+            params: {
+              debug_mode: true,
+              engagement_time_msec: 1,
+              page_location: location.href,
+              page_title: document.title,
+              script_name: 'DAD PLU v4.0'
+            }
           }
-        }]
+        ]
       })
     });
   }
@@ -270,18 +292,23 @@
   /* ----------------- main: open popup tab ----------------- */
   function scanPage() {
     const data = findPatternInPage();
-    if (!data.codes.length) { alert('No ASINs found!'); return; }
+    if (!data.codes.length) {
+      alert('No ASINs found!');
+      return;
+    }
 
-const desktopWidth = Math.min(window.innerWidth || 400, 460);
-const initialHeight = 120;
+    const desktopWidth = Math.min(window.innerWidth || 400, 460);
+    const initialHeight = 120;
 
-const win = window.open(
-  'about:blank',
-  '_blank',
-  `width=${desktopWidth},height=${initialHeight},resizable=yes,scrollbars=yes`
-);
+    const win = window.open(
+      'about:blank',
+      '_blank',
+      `width=${desktopWidth},height=${initialHeight},resizable=yes,scrollbars=yes`
+    );
     const doc = win.document;
-    const json = JSON.stringify(data).replace(/</g,'\\u003c').replace(/-->/g,'\\u002d\\u002d>');
+    const json = JSON.stringify(data)
+      .replace(/</g, '\\u003c')
+      .replace(/-->/g, '\\u002d\\u002d>');
 
     /* ---------------- popup CSS ---------------- */
     const popupCSS = `
@@ -383,31 +410,25 @@ const win = window.open(
       const panel = document.getElementById('gm-asin-panel');
       let last = 0, start = Date.now();
 
-    function grow() {
-      try {
-      const footer = document.querySelector('.footer');
-      const footerH = footer ? footer.offsetHeight : 0;
+      function grow() {
+        try {
+          const footer = document.querySelector('.footer');
+          const footerH = footer ? footer.offsetHeight : 0;
+          const wanted = panel.scrollHeight + footerH + 20;
+          const max = screen.availHeight;
+          if (wanted > last && wanted <= max) {
+            window.resizeTo(window.outerWidth, wanted);
+            last = wanted;
+          }
+        } catch {}
 
-    // Panel’s content + footer + a little safety margin
-      const wanted = panel.scrollHeight + footerH + 20;
-      const max    = screen.availHeight;        // don’t exceed screen
-
-        if (wanted > last && wanted <= max) {
-          window.resizeTo(window.outerWidth, wanted);   // only GROW
-          last = wanted;
-        }
-      } catch { /* ignore */ }
-
-      // keep trying for about 4 s
-      if (Date.now() - start < 4000) requestAnimationFrame(grow);
-    }
+        if (Date.now() - start < 4000) requestAnimationFrame(grow);
+      }
 
       window.addEventListener('load', () => {
-        grow();              // first pass
-        setTimeout(grow, 150); // after QR images render
+        grow();
+        setTimeout(grow, 150);
       });
-
-      // Enlarge later if user opens support box or more QR codes appear
       new ResizeObserver(grow).observe(panel);
     })();
 
@@ -417,7 +438,7 @@ const win = window.open(
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v3.0'
+              script_name:'DAD PLU v4.0'
             });
           }
         }
@@ -433,25 +454,57 @@ const win = window.open(
           new QRCode(document.getElementById('qr-'+c), {text:c,width:qrSize,height:qrSize})
         );
 
-        /* show Copy All ASINs if multi */
-        if(data.codes.length>1)
+        /* decide which copy buttons to show */
+        if(data.codes.length>1){
           document.getElementById('copy-all-btn').style.display='inline-flex';
+        }else{
+          document.getElementById('copy-asin-btn').style.display='inline-flex';
+        }
 
-        /* support box */
-        document.getElementById('support-btn').onclick = () => {
-          track('support_opened');
-          if(document.querySelector('.support-box')) return;
-          const box=document.createElement('div');
-          box.className='support-box';
-          box.innerHTML='<p>I hope you enjoy using this!</p>'+
-            '<p>Email: <a href="mailto:mohajiho@gmail.com">mohajiho@gmail.com</a></p>'+
-            '<p><a href="https://www.linkedin.com/in/mohajiho" target="_blank">LinkedIn</a></p>'+
-            '<button id="close-support-btn">Close</button>';
-          document.getElementById('gm-asin-panel')
-            .insertBefore(box, document.getElementById('gm-asin-panel').children[1]);
-          document.getElementById('close-support-btn').onclick = () => box.remove();
-          showTooltip(document.getElementById('support-btn'),'Opened');
+        /* —— Support button toggle —— */
+        const supportBtn = document.getElementById('support-btn');
+
+        supportBtn.onclick = () => {
+        const existing = document.querySelector('.support-box');
+
+        /* ▼ Second press  →  close the panel */
+        if (existing) {
+          existing.remove();
+          showTooltip(supportBtn, 'Closed');
+          return;
+        }
+
+        /* ▼ First press  →  open the panel */
+        track('support_opened');
+
+        const box = document.createElement('div');
+        box.className = 'support-box';
+        box.innerHTML =
+          '<p style="margin:0 0 20px 0;">I&nbsp;hope&nbsp;you&nbsp;enjoy&nbsp;using&nbsp;this&nbsp;script!</p>' +
+
+          '<p style="margin:0 0 20px 0;">Questions&nbsp;or&nbsp;suggestions?&nbsp;Feel&nbsp;free&nbsp;to&nbsp;reach&nbsp;out:</p>' +
+
+          '<p style="margin:0 0 20px 0;"><a href="mailto:mohajiho@gmail.com">mohajiho@gmail.com</a></p>' +
+
+          '<p style="margin:0 0 20px 0;">I&nbsp;would&nbsp;be&nbsp;more&nbsp;than&nbsp;happy&nbsp;to&nbsp;connect&nbsp;on&nbsp;LinkedIn:</p>' +
+
+          '<p style="margin:0 0 20px 0;"><a href="https://www.linkedin.com/in/mohajiho" target="_blank" rel="noopener noreferrer">Connect&nbsp;on&nbsp;LinkedIn</a></p>' +
+
+          '<button id="close-support-btn" style="margin-top:4px;">Close</button>';
+
+        document
+          .getElementById('gm-asin-panel')
+          .insertBefore(box, document.getElementById('gm-asin-panel').children[1]);
+
+        /* inner Close button also removes the panel */
+        document.getElementById('close-support-btn').onclick = () => {
+          box.remove();
+          showTooltip(supportBtn, 'Closed');
         };
+
+        showTooltip(supportBtn, 'Opened');
+        };
+
 
         /* copy handlers */
         ['copy-img-btn','copy-btn','copy-asin-btn','copy-all-btn'].forEach(id=>{
@@ -498,55 +551,92 @@ const win = window.open(
     doc.close();
   }
 
-    /* ---------------- Tampermonkey menu ---------------- */
-    GM_registerMenuCommand('Start Scan', scanPage);
+  /* ---------------- Tampermonkey menu ---------------- */
+  GM_registerMenuCommand('Start Scan', scanPage);
 
-    /* -------- floating scan button & hotkey -------- */
-    if(!window.opener && !/about:blank/i.test(location.href)){
-        const host=document.createElement('div');
-        Object.assign(host.style,{all:'initial',position:'fixed',top:0,left:0,width:0,height:0,zIndex:2147483647});
-        document.documentElement.appendChild(host);
+  /* --------------------------------------------------------------------------- */
+  /* ------------------------- floating scan button + hotkey ------------------- */
+  /* --------------------------------------------------------------------------- */
 
-        const shadow=host.attachShadow({mode:'closed'});
-        shadow.innerHTML=`
-    <style>
-      #gm-asin-btn{
-        position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
-        background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
-        cursor:pointer;display:flex;align-items:center;justify-content:center;
-        animation:gm-color-shift 18s ease-in-out infinite;
-        transition:transform 0.2s ease-out;
-      }
-      #gm-asin-btn:active{transform:scale(.95);}
-      @keyframes gm-color-shift{
-        0% {background:#77bc1f;}
-        33% {background:#00a8e1;}
-        66% {background:#ffa700;}
-        100% {background:#77bc1f;}
-      }
-    </style>
-    <button id="gm-asin-btn" title="Start Scan">search</button>
-  `;
+  if (!window.opener && !/about:blank/i.test(location.href)) {
+    function createFloatingButton() {
+      if (document.getElementById('gm‑asin‑host')) return; // already exists
 
-    shadow.getElementById('gm-asin-btn').addEventListener('click',scanPage);
+      const host = document.createElement('div');
+      host.id = 'gm‑asin‑host';
+      Object.assign(host.style, {
+        all: 'initial',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: 0,
+        height: 0,
+        zIndex: 2147483647
+      });
+      document.body.appendChild(host);
 
-    /* survive SPA nav */
-    const fire=()=>window.dispatchEvent(new Event('locationchange'));
-    const _ps=history.pushState; history.pushState=function(){_ps.apply(this,arguments);fire();};
-    const _rs=history.replaceState; history.replaceState=function(){_rs.apply(this,arguments);fire();};
-    window.addEventListener('popstate',fire);
+      const shadow = host.attachShadow({ mode: 'closed' });
+      shadow.innerHTML = `
+        <style>
+          #gm-asin-btn{
+            position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
+            background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
+            cursor:pointer;display:flex;align-items:center;justify-content:center;
+            animation:gm-color-shift 18s ease-in-out infinite;
+            transition:transform .2s ease-out;
+          }
+          #gm-asin-btn:active{transform:scale(.95);}
+          @keyframes gm-color-shift{
+            0%{background:#77bc1f;}33%{background:#00a8e1;}66%{background:#ffa700;}100%{background:#77bc1f;}
+          }
+        </style>
+        <button id="gm-asin-btn" title="Start Scan">search</button>
+      `;
+      shadow.getElementById('gm-asin-btn').addEventListener('click', scanPage);
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', createFloatingButton, { once: true });
+    } else {
+      createFloatingButton();
+    }
+
+    /* recreate if Amazon rewrites DOM */
+    new MutationObserver(createFloatingButton).observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+
+    /* survive SPA navigation */
+    const fire = () => window.dispatchEvent(new Event('locationchange'));
+    const _ps = history.pushState;
+    history.pushState = function () {
+      _ps.apply(this, arguments);
+      fire();
+    };
+    const _rs = history.replaceState;
+    history.replaceState = function () {
+      _rs.apply(this, arguments);
+      fire();
+    };
+    window.addEventListener('popstate', fire);
 
     /* hotkey */
-    function hotkeyMatches(e){
-      return e.key.toLowerCase()===HOTKEY.key.toLowerCase() &&
-             e.shiftKey===HOTKEY.shift && e.ctrlKey===HOTKEY.ctrl &&
-             e.altKey===HOTKEY.alt && e.metaKey===HOTKEY.meta;
+    function hotkeyMatches(e) {
+      return (
+        e.key.toLowerCase() === HOTKEY.key.toLowerCase() &&
+        e.shiftKey === HOTKEY.shift &&
+        e.ctrlKey === HOTKEY.ctrl &&
+        e.altKey === HOTKEY.alt &&
+        e.metaKey === HOTKEY.meta
+      );
     }
-    window.addEventListener('keydown',e=>{
-      if(!hotkeyMatches(e)) return;
-      const tgt=e.target, tag=(tgt.tagName||'').toUpperCase();
-      if(tgt.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
-      e.preventDefault(); scanPage();
+    window.addEventListener('keydown', e => {
+      if (!hotkeyMatches(e)) return;
+      const tag = (e.target.tagName || '').toUpperCase();
+      if (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      e.preventDefault();
+      scanPage();
     });
   }
 })();
