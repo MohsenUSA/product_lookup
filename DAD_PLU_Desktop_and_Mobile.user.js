@@ -1,12 +1,13 @@
 // ==UserScript==
-// @name         DAD PLU (Desktop & Mobile) GA + HotKey
+// @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
-// @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      4.0
-// @description  Find ASINs & product info, generate QR in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
+// @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
+// @version      4.7
+// @description  Find ASINs & product info, generate QR or Code-128 barcode in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
 // @match        *://*.a2z.com/*
+// @match        *://*.github.io/*
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
 // @connect      https://www.google-analytics.com
@@ -18,14 +19,19 @@
 (function () {
   'use strict';
 
-  /* ----------------- USER‑EDITABLE HOTKEY ----------------- */
+  /* ----------------- USER-EDITABLE HOTKEY ----------------- */
   const HOTKEY = { key: 'L', shift: true, ctrl: false, alt: false, meta: false };
 
-  /* -------------- Load Material Icons font -------------- */
+  /* -------------- Load icon fonts -------------- */
   const iconLink = document.createElement('link');
   iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
   iconLink.rel = 'stylesheet';
   document.head.appendChild(iconLink);
+
+  const symLink = document.createElement('link');
+  symLink.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined';
+  symLink.rel = 'stylesheet';
+  document.head.appendChild(symLink);
 
   /* ------------------------- CONFIG ------------------------ */
   const CONFIG = {
@@ -40,7 +46,7 @@
       '#corePrice_mobile_feature_div',
       '#corePriceDisplay_mobile_feature_div'
     ],
-    unitRegex: /\(\s*\$([\d,.]+)(?:\s*\$[\d,.]+)?\s*\/\s*([^)]+)\)/,
+    unitRegex: /\$\s*([\d,.]+)(?:\s*\$[\d,.]+)?\s*\/\s*([^)]+)/,
     availabilitySelectors: [
       '#availability .a-size-medium',
       '#availability .a-color-success',
@@ -65,6 +71,20 @@
     savingsMessageSelector: '[id^="promoMessage"]',
     savingsLabelSelector: "label[for^='checkbox']"
   };
+
+  /* ---------- helper: value in Item-details table ---------- */
+  function getDetailValue(label) {
+    label = label.toLowerCase();
+    const rows = document.querySelectorAll('.prodDetTable tr');
+    for (const row of rows) {
+      const th = row.querySelector('th');
+      const td = row.querySelector('td');
+      if (th && td && th.textContent.trim().toLowerCase() === label) {
+        return td.textContent.trim();
+      }
+    }
+    return '';
+  }
 
   /* ------------------ scrape current page ------------------ */
   function findPatternInPage() {
@@ -100,8 +120,8 @@
 
     /* Prices */
     let discount = '',
-      promoPrice = '',
-      regularPrice = '';
+        promoPrice = '',
+        regularPrice = '';
     const dEl = document.querySelector(CONFIG.discountSelector);
     const pEl = document.querySelector(CONFIG.promoPriceSelector);
     const rEl = document.querySelector(CONFIG.regularPriceSelector);
@@ -113,7 +133,7 @@
 
     /* Prime exclusive / typical */
     let primeExclusivePrice = '',
-      typicalPrice = '';
+        typicalPrice = '';
     document
       .querySelectorAll(CONFIG.primeContainerSelectors.join(','))
       .forEach(coreEl => {
@@ -148,7 +168,7 @@
 
     /* Savings promo */
     let savingsText = '',
-      savingsLink = '';
+        savingsLink = '';
     try {
       const promoMsg = document.querySelector(CONFIG.savingsMessageSelector);
       const label = document.querySelector(CONFIG.savingsLabelSelector);
@@ -165,8 +185,33 @@
           if (a) savingsLink = a.href;
         }
       }
-    } catch {
-      /* ignore */
+    } catch {}
+
+    /* --------- extra fields --------- */
+    let productType = '';
+    const stateEl = document.querySelector(
+      'script[type="a-state"][data-a-state*="voyager-desktop-context"]'
+    );
+    if (stateEl && stateEl.textContent) {
+      try {
+        const obj = JSON.parse(stateEl.textContent.trim());
+        if (obj.product_type) productType = obj.product_type;
+      } catch {}
+    }
+
+    const productCategory =
+      getDetailValue('Product Category') ||
+      getDetailValue('Brand Name') ||
+      getDetailValue('Category');
+
+    const location = getDetailValue('Manufacturer') || getDetailValue('Location');
+
+    let upc = getDetailValue('UPC');
+    if (upc) {
+      upc = upc
+        .split(/\s+/)
+        .filter(v => /^\d{12}$/.test(v))
+        .join('\n');
     }
 
     return {
@@ -181,7 +226,11 @@
       unitPrice,
       snapEbtStatus,
       savingsText,
-      savingsLink
+      savingsLink,
+      productType,
+      productCategory,
+      location,
+      upc
     };
   }
 
@@ -200,7 +249,6 @@
         <p class="code-text">ASIN: ${code}</p>`;
 
       if (data.codes.length === 1) {
-        /* single‑ASIN extras */
         if (data.availability) {
           const cls =
             data.availability === 'Low Stock'
@@ -233,22 +281,35 @@
         html += `<p class="${snapClass}">${data.snapEbtStatus}</p>`;
         if (data.savingsText) {
           html += `<p class="savings-message">Savings: "${data.savingsText}"<br>
-              <a href="${data.savingsLink}" target="_blank">Shop deal</a></p>`;
+            <a href="${data.savingsLink}" target="_blank">Shop deal</a></p>`;
+        }
+
+        /* extra fields */
+        const extra = [];
+        if (data.productType) extra.push(`<p class="product-type">Product Type: ${data.productType}</p>`);
+        if (data.productCategory) extra.push(`<p class="product-category">Product Category / Brand: ${data.productCategory}</p>`);
+        if (data.location) extra.push(`<p class="location">Location / Manufacturer: ${data.location}</p>`);
+        if (data.upc) extra.push(`<p class="upc">UPC(s):<br>${data.upc.replace(/\n/g, '<br>')}</p>`);
+        if (extra.length) {
+          html += `<div class="extra-info">${extra.join('')}</div>`;
         }
       }
       html += `</div>`;
     });
 
-    /* footer buttons */
+    /* footer */
     html += `<div class="footer">
-      <button id="support-btn"   class="btn support-btn"   title="Support Info"><i class="material-icons">contact_support</i><span class="tooltiptext"></span></button>
-      <button id="copy-img-btn"  class="btn copy-img-btn"  title="Copy QR Code Image"><i class="material-icons">qr_code</i><span class="tooltiptext"></span></button>
-      <button id="copy-btn"      class="btn copy-btn"      title="Copy All Product Info"><i class="material-icons">content_copy</i><span class="tooltiptext"></span></button>
-      <button id="copy-asin-btn" class="btn copy-asin-btn" title="Copy ASIN"        style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
-      <button id="copy-all-btn"  class="btn copy-all-btn"  title="Copy All ASINs"   style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
-      <button id="close-btn-bottom" class="btn close-btn-bottom" title="Close"><i class="material-icons">close</i></button>
-    </div>
-  </div>`;
+      <div class="footer-inner">
+        <button id="support-btn"   class="btn support-btn"   title="Support Info"><i class="material-icons">contact_support</i><span class="tooltiptext"></span></button>
+        <button id="barcode-btn"   class="btn barcode-btn"   title="Toggle Barcode / QR"><i class="material-symbols-outlined">barcode_scanner</i><span class="tooltiptext"></span></button>
+        <button id="copy-img-btn"  class="btn copy-img-btn"  title="Copy QR Code Image"><i class="material-icons">qr_code</i><span class="tooltiptext"></span></button>
+        <button id="copy-btn"      class="btn copy-btn"      title="Copy All Product Info"><i class="material-icons">content_copy</i><span class="tooltiptext"></span></button>
+        <button id="copy-asin-btn" class="btn copy-asin-btn" title="Copy ASIN"        style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
+        <button id="copy-all-btn"  class="btn copy-all-btn"  title="Copy All ASINs"   style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
+        <button id="close-btn-bottom" class="btn close-btn-bottom" title="Close"><i class="material-icons">close</i></button>
+      </div></div>
+    </div>`;
+
     return html;
   }
 
@@ -280,7 +341,7 @@
               engagement_time_msec: 1,
               page_location: location.href,
               page_title: document.title,
-              script_name: 'DAD PLU v4.0'
+              script_name: 'DAD PLU v4.7'
             }
           }
         ]
@@ -298,12 +359,15 @@
     }
 
     const desktopWidth = Math.min(window.innerWidth || 400, 460);
-    const initialHeight = 120;
+    const wantedHeight = Math.min(
+      screen.availHeight,
+      document.documentElement.clientHeight || 600
+    );
 
     const win = window.open(
       'about:blank',
       '_blank',
-      `width=${desktopWidth},height=${initialHeight},resizable=yes,scrollbars=yes`
+      `width=${desktopWidth},height=${wantedHeight},resizable=yes,scrollbars=yes`
     );
     const doc = win.document;
     const json = JSON.stringify(data)
@@ -314,22 +378,12 @@
     const popupCSS = `
       body { margin:0; }
       #gm-asin-panel {
-        position:fixed; top:0; left:0; right:0; bottom:0;
-        overflow-y:auto; background:#f0f2f5; padding:20px;
+        background:#f0f2f5; padding:20px;
         box-sizing:border-box; font-family:Arial,Helvetica,sans-serif;
+        min-height:100%;
       }
       #gm-asin-panel h3 {
         text-align:center; margin:0 0 15px; font-size:18px; color:#111;
-      }
-      .support-box {
-        background:#fff; border:1px solid #ccc; border-radius:8px;
-        padding:10px; margin-bottom:15px;
-      }
-      .support-box p { margin:5px 0; }
-      .support-box a { color:#0066c0; }
-      #close-support-btn {
-        margin-top:8px; padding:4px 8px; border:none;
-        border-radius:4px; background:#d9534f; color:#fff; cursor:pointer;
       }
       .qr-item {
         background:#fff; border:1px solid #ccc; border-radius:8px;
@@ -347,13 +401,23 @@
       .regular-price{color:#555;margin-bottom:6px;}
       .discount-percentage{color:#cc0c39;font-weight:bold;margin-bottom:6px;}
       .unit-price{color:rgb(75,140,245);margin-bottom:6px;}
+      .extra-info{
+        background:#eef3ff;border-radius:8px;padding:8px 10px;margin-top:10px;
+      }
+      .extra-info p{margin:4px 0;color:#555;}
       .snap-eligible{color:#4caf50;margin-bottom:6px;}
       .snap-not-eligible{color:#d9534f;margin-bottom:6px;}
       .savings-message{background:#ccf1cd;padding:5px;border-radius:4px;margin-bottom:10px;}
       .savings-message a{font-weight:bold;}
+      /* footer containers */
       .footer{
-        position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px;
-        border-top:1px solid #ccc;display:flex;justify-content:center;gap:clamp(6px,2vw,12px);
+        position:sticky;bottom:0;padding:10px;background:transparent;
+        display:flex;justify-content:center;
+      }
+      .footer-inner{
+        background:#fff;border:1px solid #ccc;border-radius:14px;
+        display:flex;gap:clamp(6px,2vw,12px);padding:8px 10px;
+        box-shadow:0 2px 4px rgba(0,0,0,.1);
       }
       .btn{
         width:clamp(34px,10vw,45px);height:clamp(34px,10vw,45px);
@@ -367,12 +431,16 @@
         white-space:nowrap;visibility:hidden;opacity:0;transition:opacity .2s;
       }
       .support-btn{background:#4285f4;color:#fff;}
+      .barcode-btn{background:#f9a825;color:#111;}
       .copy-img-btn{background:#f0c14b;color:#111;}
       .copy-btn{background:#0066c0;color:#fff;}
       .copy-asin-btn,
       .copy-all-btn{background:#4caf50;color:#fff;}
       .close-btn-bottom{background:#d9534f;color:#fff;}
-      .material-icons{font-size:clamp(18px,5vw,22px);}
+      .material-icons,
+      .material-symbols-outlined{
+        font-size:clamp(18px,5vw,22px);
+      }
     `;
 
     /* ---------------- GA4 gtag (debug) ---------------- */
@@ -398,55 +466,15 @@
       <title>ASIN Finder</title>
       ${gaTag}
       <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"><!-- Symbols for barcode_scanner -->
       <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/barcodes/JsBarcode.ean-upc.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/barcodes/JsBarcode.code128.min.js"></script>
       <style>${popupCSS}</style>
     </head><body>
       ${buildInnerHTML(data)}
       <script>
         const data = ${json};
-
-    /* ---------- grow‑only auto‑height (panel‑based) ---------- */
-    (function () {
-      const panel = document.getElementById('gm-asin-panel');
-      let last = 0, start = Date.now();
-
-      function grow() {
-        try {
-          const footer = document.querySelector('.footer');
-          const footerH = footer ? footer.offsetHeight : 0;
-          const wanted = panel.scrollHeight + footerH + 20;
-          const max = screen.availHeight;
-          if (wanted > last && wanted <= max) {
-            window.resizeTo(window.outerWidth, wanted);
-            last = wanted;
-          }
-        } catch {}
-
-        if (Date.now() - start < 4000) requestAnimationFrame(grow);
-      }
-
-      window.addEventListener('load', () => {
-        grow();
-        setTimeout(grow, 150);
-      });
-      new ResizeObserver(grow).observe(panel);
-    })();
-
-        /* ---------- analytics helper ---------- */
-        function track(btn){
-          if(window.gtag){
-            gtag('event', btn, {
-              debug_mode:true,
-              page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v4.0'
-            });
-          }
-        }
-
-        /* hide Copy‑QR on mobile */
-        if(/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent)){
-          const b=document.querySelector('.copy-img-btn'); if(b) b.style.display='none';
-        }
 
         /* build QR codes */
         const qrSize = Math.max(160, Math.min(window.innerWidth*0.4, 200));
@@ -457,54 +485,47 @@
         /* decide which copy buttons to show */
         if(data.codes.length>1){
           document.getElementById('copy-all-btn').style.display='inline-flex';
+          document.getElementById('copy-btn').style.display='none';
+          const imgBtn=document.querySelector('.copy-img-btn');
+          if(imgBtn) imgBtn.style.display='none';
         }else{
           document.getElementById('copy-asin-btn').style.display='inline-flex';
         }
 
-        /* —— Support button toggle —— */
-        const supportBtn = document.getElementById('support-btn');
-
-        supportBtn.onclick = () => {
-        const existing = document.querySelector('.support-box');
-
-        /* ▼ Second press  →  close the panel */
-        if (existing) {
-          existing.remove();
-          showTooltip(supportBtn, 'Closed');
-          return;
+        /* analytics helper */
+        function track(btn){
+          if(window.gtag){
+            gtag('event', btn, {
+              debug_mode:true,
+              page_location:'https://dad.mohajiho.com/popup',
+              script_name:'DAD PLU v4.7'
+            });
+          }
         }
 
-        /* ▼ First press  →  open the panel */
-        track('support_opened');
+        /* hide Copy-QR on mobile */
+        if(/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent)){
+          const b=document.querySelector('.copy-img-btn'); if(b) b.style.display='none';
+        }
 
-        const box = document.createElement('div');
-        box.className = 'support-box';
-        box.innerHTML =
-          '<p style="margin:0 0 20px 0;">I&nbsp;hope&nbsp;you&nbsp;enjoy&nbsp;using&nbsp;this&nbsp;script!</p>' +
-
-          '<p style="margin:0 0 20px 0;">Questions&nbsp;or&nbsp;suggestions?&nbsp;Feel&nbsp;free&nbsp;to&nbsp;reach&nbsp;out:</p>' +
-
-          '<p style="margin:0 0 20px 0;"><a href="mailto:mohajiho@gmail.com">mohajiho@gmail.com</a></p>' +
-
-          '<p style="margin:0 0 20px 0;">I&nbsp;would&nbsp;be&nbsp;more&nbsp;than&nbsp;happy&nbsp;to&nbsp;connect&nbsp;on&nbsp;LinkedIn:</p>' +
-
-          '<p style="margin:0 0 20px 0;"><a href="https://www.linkedin.com/in/mohajiho" target="_blank" rel="noopener noreferrer">Connect&nbsp;on&nbsp;LinkedIn</a></p>' +
-
-          '<button id="close-support-btn" style="margin-top:4px;">Close</button>';
-
-        document
-          .getElementById('gm-asin-panel')
-          .insertBefore(box, document.getElementById('gm-asin-panel').children[1]);
-
-        /* inner Close button also removes the panel */
-        document.getElementById('close-support-btn').onclick = () => {
-          box.remove();
-          showTooltip(supportBtn, 'Closed');
+        /* Support panel toggle */
+        const supportBtn = document.getElementById('support-btn');
+        supportBtn.onclick = () => {
+          const existing = document.querySelector('.support-box');
+          if (existing) { existing.remove(); showTooltip(supportBtn,'Closed'); return; }
+          track('support_opened');
+          const box=document.createElement('div');
+          box.className='support-box';
+          box.innerHTML=
+            '<p style="margin:0 0 20px 0;">I&nbsp;hope&nbsp;you&nbsp;enjoy&nbsp;using&nbsp;this&nbsp;script!</p>'+
+            '<p style="margin:0 0 20px 0;">Questions&nbsp;or&nbsp;suggestions?&nbsp;Feel&nbsp;free&nbsp;to&nbsp;reach&nbsp;out:</p>'+
+            '<p style="margin:0 0 20px 0;"><a href="mailto:mohajiho@gmail.com">mohajiho@gmail.com</a></p>'+
+            '<p style="margin:0 0 20px 0;">I&nbsp;would&nbsp;be&nbsp;more&nbsp;than&nbsp;happy&nbsp;to&nbsp;connect&nbsp;on&nbsp;LinkedIn:</p>'+
+            '<p style="margin:0 0 20px 0;"><a href="https://www.linkedin.com/in/mohajiho" target="_blank" rel="noopener noreferrer">Connect&nbsp;on&nbsp;LinkedIn</a></p>';
+          document.getElementById('gm-asin-panel')
+            .insertBefore(box,document.getElementById('gm-asin-panel').children[1]);
+          showTooltip(supportBtn,'Opened');
         };
-
-        showTooltip(supportBtn, 'Opened');
-        };
-
 
         /* copy handlers */
         ['copy-img-btn','copy-btn','copy-asin-btn','copy-all-btn'].forEach(id=>{
@@ -523,23 +544,42 @@
               });
               track('copy_qr_img');
             }else if(id==='copy-btn'){
-              const txt=data.productTitle
-                ? data.productTitle + ' – ASIN ' + data.codes[0]
-                : 'ASIN ' + data.codes[0];
-              await navigator.clipboard.writeText(txt);
-              track('copy_info');
+              const txt=data.productTitle?data.productTitle+' – ASIN '+data.codes[0]:'ASIN '+data.codes[0];
+              await navigator.clipboard.writeText(txt); track('copy_info');
             }else if(id==='copy-asin-btn'){
-              await navigator.clipboard.writeText(data.codes[0]);
-              track('copy_asin');
+              await navigator.clipboard.writeText(data.codes[0]); track('copy_asin');
             }else{
-              await navigator.clipboard.writeText(data.codes.join('\\n'));
-              track('copy_all_asins');
+              await navigator.clipboard.writeText(data.codes.join('\\n')); track('copy_all_asins');
             }
             showTooltip(btn,'Copied!');
           }catch(e){ alert('Clipboard error: '+e.message); }};
         });
 
-        document.getElementById('close-btn-bottom').onclick = () => window.close();
+        document.getElementById('close-btn-bottom').onclick=()=>window.close();
+
+        /* ---------- Barcode / QR toggle ---------- */
+        let barcodeMode = false;
+        const barcodeBtn = document.getElementById('barcode-btn');
+        barcodeBtn.onclick = () => {
+          barcodeMode = !barcodeMode;
+          data.codes.forEach(c => {
+            const container = document.getElementById('qr-'+c);
+            container.innerHTML = '';
+            if (barcodeMode) {
+              const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+              container.appendChild(svg);
+              try {
+                JsBarcode(svg, c, {format:'CODE128', displayValue:false, height:qrSize});
+              } catch(err){
+                console.error('Barcode error: ', err);
+              }
+            } else {
+              new QRCode(container, {text:c,width:qrSize,height:qrSize});
+            }
+          });
+          showTooltip(barcodeBtn, barcodeMode ? 'Barcode' : 'QR Code');
+          track('toggle_barcode');
+        };
 
         function showTooltip(btn,msg){
           const tip=btn.querySelector('.tooltiptext');
@@ -554,89 +594,46 @@
   /* ---------------- Tampermonkey menu ---------------- */
   GM_registerMenuCommand('Start Scan', scanPage);
 
-  /* --------------------------------------------------------------------------- */
-  /* ------------------------- floating scan button + hotkey ------------------- */
-  /* --------------------------------------------------------------------------- */
-
+  /* -------- floating scan button + hotkey -------- */
   if (!window.opener && !/about:blank/i.test(location.href)) {
     function createFloatingButton() {
-      if (document.getElementById('gm‑asin‑host')) return; // already exists
-
-      const host = document.createElement('div');
-      host.id = 'gm‑asin‑host';
-      Object.assign(host.style, {
-        all: 'initial',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: 0,
-        height: 0,
-        zIndex: 2147483647
-      });
+      if (document.getElementById('gm-asin-host')) return;
+      const host=document.createElement('div');
+      host.id='gm-asin-host';
+      Object.assign(host.style,{all:'initial',position:'fixed',top:0,left:0,width:0,height:0,zIndex:2147483647});
       document.body.appendChild(host);
-
-      const shadow = host.attachShadow({ mode: 'closed' });
-      shadow.innerHTML = `
+      const shadow=host.attachShadow({mode:'closed'});
+      shadow.innerHTML=`
         <style>
           #gm-asin-btn{
             position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
             background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
             cursor:pointer;display:flex;align-items:center;justify-content:center;
-            animation:gm-color-shift 18s ease-in-out infinite;
-            transition:transform .2s ease-out;
+            animation:gm-color-shift 18s ease-in-out infinite;transition:transform .2s;
           }
           #gm-asin-btn:active{transform:scale(.95);}
           @keyframes gm-color-shift{
             0%{background:#77bc1f;}33%{background:#00a8e1;}66%{background:#ffa700;}100%{background:#77bc1f;}
           }
         </style>
-        <button id="gm-asin-btn" title="Start Scan">search</button>
-      `;
-      shadow.getElementById('gm-asin-btn').addEventListener('click', scanPage);
+        <button id="gm-asin-btn" title="Start Scan">search</button>`;
+      shadow.getElementById('gm-asin-btn').addEventListener('click',scanPage);
     }
-
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', createFloatingButton, { once: true });
-    } else {
-      createFloatingButton();
+    if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',createFloatingButton,{once:true});
+    else createFloatingButton();
+    new MutationObserver(createFloatingButton).observe(document.documentElement,{childList:true,subtree:true});
+    const fire=()=>window.dispatchEvent(new Event('locationchange'));
+    const _ps=history.pushState;history.pushState=function(){_ps.apply(this,arguments);fire();};
+    const _rs=history.replaceState;history.replaceState=function(){_rs.apply(this,arguments);fire();};
+    window.addEventListener('popstate',fire);
+    function hotkeyMatches(e){
+      return e.key.toLowerCase()===HOTKEY.key.toLowerCase()&&e.shiftKey===HOTKEY.shift&&e.ctrlKey===HOTKEY.ctrl&&e.altKey===HOTKEY.alt&&e.metaKey===HOTKEY.meta;
     }
-
-    /* recreate if Amazon rewrites DOM */
-    new MutationObserver(createFloatingButton).observe(document.documentElement, {
-      childList: true,
-      subtree: true
-    });
-
-    /* survive SPA navigation */
-    const fire = () => window.dispatchEvent(new Event('locationchange'));
-    const _ps = history.pushState;
-    history.pushState = function () {
-      _ps.apply(this, arguments);
-      fire();
-    };
-    const _rs = history.replaceState;
-    history.replaceState = function () {
-      _rs.apply(this, arguments);
-      fire();
-    };
-    window.addEventListener('popstate', fire);
-
-    /* hotkey */
-    function hotkeyMatches(e) {
-      return (
-        e.key.toLowerCase() === HOTKEY.key.toLowerCase() &&
-        e.shiftKey === HOTKEY.shift &&
-        e.ctrlKey === HOTKEY.ctrl &&
-        e.altKey === HOTKEY.alt &&
-        e.metaKey === HOTKEY.meta
-      );
-    }
-    window.addEventListener('keydown', e => {
-      if (!hotkeyMatches(e)) return;
-      const tag = (e.target.tagName || '').toUpperCase();
-      if (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
-      e.preventDefault();
-      scanPage();
+    window.addEventListener('keydown',e=>{
+      if(!hotkeyMatches(e))return;
+      const tag=(e.target.tagName||'').toUpperCase();
+      if(e.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(tag))return;
+      e.preventDefault();scanPage();
     });
   }
 })();
