@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      4.8
+// @version      4.9
 // @description  Find ASINs & product info, generate QR or Code-128 barcode in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -349,7 +349,7 @@
               engagement_time_msec: 1,
               page_location: location.href,
               page_title: document.title,
-              script_name: 'DAD PLU v4.8'
+              script_name: 'DAD PLU v4.9'
             }
           }
         ]
@@ -517,7 +517,7 @@
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v4.8'
+              script_name:'DAD PLU v4.9'
             });
           }
         }
@@ -588,7 +588,7 @@
               const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
               container.appendChild(svg);
               try {
-                JsBarcode(svg, c, {format:'CODE128', displayValue:false, height:qrSize});
+                JsBarcode(svg, c, {format:'CODE128', displayValue:false, width: 3, height:qrSize});
               } catch(err){
                 console.error('Barcode error: ', err);
               }
@@ -623,19 +623,31 @@
       document.body.appendChild(host);
       const shadow=host.attachShadow({mode:'closed'});
       shadow.innerHTML=`
-        <style>
-          #gm-asin-btn{
-            position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
-            background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
-            cursor:pointer;display:flex;align-items:center;justify-content:center;
-            animation:gm-color-shift 18s ease-in-out infinite;transition:transform .2s;
-          }
-          #gm-asin-btn:active{transform:scale(.95);}
-          @keyframes gm-color-shift{
-            0%{background:#77bc1f;}33%{background:#00a8e1;}66%{background:#ffa700;}100%{background:#77bc1f;}
-          }
-        </style>
-        <button id="gm-asin-btn" title="Start Scan">search</button>`;
+  <style>
+    #gm-asin-btn{
+      position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
+      background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;
+      /* colour-cycle + heartbeat pulse */
+      animation:
+          gm-color-shift 18s ease-in-out infinite,
+          gm-heartbeat    1.2s ease-in-out infinite;
+      transition:transform .2s;
+    }
+    #gm-asin-btn:active{transform:scale(.95);}
+
+    @keyframes gm-color-shift{
+      0%{background:#77bc1f;}33%{background:#00a8e1;}66%{background:#ffa700;}100%{background:#77bc1f;}
+    }
+
+    /* ── heartbeat: two quick pulses every 1.2 s ── */
+    @keyframes gm-heartbeat{
+      0%   { transform: scale(1);  }
+      50%  { transform: scale(1.2);}
+      100% { transform: scale(1);  }
+    }
+  </style>
+  <button id="gm-asin-btn" title="Start Scan">search</button>`;
       shadow.getElementById('gm-asin-btn').addEventListener('click',scanPage);
     }
     if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',createFloatingButton,{once:true});
