@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      4.7
+// @version      4.8
 // @description  Find ASINs & product info, generate QR or Code-128 barcode in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -275,10 +275,14 @@
         if (data.discount) {
           html += `<p class="discount-percentage">Discount: ${data.discount}</p>`;
         }
-        const snapClass = data.snapEbtStatus.startsWith('SNAP')
-          ? 'snap-eligible'
-          : 'snap-not-eligible';
-        html += `<p class="${snapClass}">${data.snapEbtStatus}</p>`;
+        // ── SNAP EBT: only show when the item is NOT out of stock ──
+        if (!/out of stock/i.test(data.availability || '')) {
+          const snapClass = data.snapEbtStatus.startsWith('SNAP')
+            ? 'snap-eligible'
+            : 'snap-not-eligible';
+          html += `<p class="${snapClass}">${data.snapEbtStatus}</p>`;
+        }
+
         if (data.savingsText) {
           html += `<p class="savings-message">Savings: "${data.savingsText}"<br>
             <a href="${data.savingsLink}" target="_blank">Shop deal</a></p>`;
@@ -289,7 +293,11 @@
         if (data.productType) extra.push(`<p class="product-type">Product Type: ${data.productType}</p>`);
         if (data.productCategory) extra.push(`<p class="product-category">Product Category / Brand: ${data.productCategory}</p>`);
         if (data.location) extra.push(`<p class="location">Location / Manufacturer: ${data.location}</p>`);
-        if (data.upc) extra.push(`<p class="upc">UPC(s):<br>${data.upc.replace(/\n/g, '<br>')}</p>`);
+        if (data.upc) {
+            extra.push(
+          `<p class="upc">UPC(s):<br>${data.upc.replace(/\n/g, '<br>')}</p>`
+        );
+        }
         if (extra.length) {
           html += `<div class="extra-info">${extra.join('')}</div>`;
         }
@@ -341,7 +349,7 @@
               engagement_time_msec: 1,
               page_location: location.href,
               page_title: document.title,
-              script_name: 'DAD PLU v4.7'
+              script_name: 'DAD PLU v4.8'
             }
           }
         ]
@@ -401,6 +409,9 @@
       .regular-price{color:#555;margin-bottom:6px;}
       .discount-percentage{color:#cc0c39;font-weight:bold;margin-bottom:6px;}
       .unit-price{color:rgb(75,140,245);margin-bottom:6px;}
+      .extra-info p + p {
+       margin-top: 16px;
+      }
       .extra-info{
         background:#eef3ff;border-radius:8px;padding:8px 10px;margin-top:10px;
       }
@@ -409,6 +420,14 @@
       .snap-not-eligible{color:#d9534f;margin-bottom:6px;}
       .savings-message{background:#ccf1cd;padding:5px;border-radius:4px;margin-bottom:10px;}
       .savings-message a{font-weight:bold;}
+      .extra-info .product-type     { color:rgb(4, 139, 184); margin-bottom:6px; }
+      .extra-info .product-category { color:rgb(148, 66, 133); margin-bottom:6px; }
+      .extra-info .location         { color:rgb(249, 164, 7);  margin-bottom:6px; }
+      .extra-info .upc              { color:rgb(255, 55, 0); margin-bottom:6px; }
+      .upc {
+        margin-top: 1px;   /* spacing before the first UPC */
+        line-height: 2; /* gentle space between UPCs   */
+      }
       /* footer containers */
       .footer{
         position:sticky;bottom:0;padding:10px;background:transparent;
@@ -498,7 +517,7 @@
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v4.7'
+              script_name:'DAD PLU v4.8'
             });
           }
         }
