@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      5.0
+// @version      4.9
 // @description  Find ASINs & product info, generate QR or Code-128 barcode in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -349,7 +349,7 @@
               engagement_time_msec: 1,
               page_location: location.href,
               page_title: document.title,
-              script_name: 'DAD PLU v5.0'
+              script_name: 'DAD PLU v4.9'
             }
           }
         ]
@@ -517,12 +517,12 @@
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v5.0'
+              script_name:'DAD PLU v4.9'
             });
           }
         }
 
-        /* hide Copy-QR Copy on mobile */
+        /* hide Copy-QR on mobile */
         if(/Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent)){
           const b=document.querySelector('.copy-img-btn'); if(b) b.style.display='none';
         }
@@ -616,62 +616,41 @@
 
   /* -------- floating scan button + hotkey -------- */
   if (!window.opener && !/about:blank/i.test(location.href)) {
-function createFloatingButton() {
-  if (document.getElementById('gm-asin-host')) return;
-  const host = document.createElement('div');
-  host.id = 'gm-asin-host';
-  Object.assign(host.style, {
-    all: 'initial',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: 0,
-    height: 0,
-    zIndex: 2147483647
-  });
-  document.body.appendChild(host);
-  const shadow = host.attachShadow({ mode: 'closed' });
+    function createFloatingButton() {
+      if (document.getElementById('gm-asin-host')) return;
+      const host=document.createElement('div');
+      host.id='gm-asin-host';
+      Object.assign(host.style,{all:'initial',position:'fixed',top:0,left:0,width:0,height:0,zIndex:2147483647});
+      document.body.appendChild(host);
+      const shadow=host.attachShadow({mode:'closed'});
+      shadow.innerHTML=`
+  <style>
+    #gm-asin-btn{
+      position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
+      background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;
+      /* colour-cycle + heartbeat pulse */
+      animation:
+          gm-color-shift 18s ease-in-out infinite,
+          gm-heartbeat    1.2s ease-in-out infinite;
+      transition:transform .2s;
+    }
+    #gm-asin-btn:active{transform:scale(.95);}
 
-  const base64Icon = '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';
+    @keyframes gm-color-shift{
+      0%{background:#77bc1f;}33%{background:#00a8e1;}66%{background:#ffa700;}100%{background:#77bc1f;}
+    }
 
-  shadow.innerHTML = `
-    <style>
-        /* bounce keyframes */
-        @keyframes bounce {
-        0%, 100%   { transform: scale(1); }
-        50%        { transform: scale(1.2); }        }
-      #gm-asin-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 48px;
-        height: 48px;
-        padding: 0;
-        border: none;
-        border-radius: 50%;
-        overflow: hidden;
-        background: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: bounce 2s ease-in-out infinite;
-
-      }
-      #gm-asin-btn img {
-        width: 80%;
-        height: 80%;
-        object-fit: contain;
-        display: block;
-      }
-    </style>
-    <button id="gm-asin-btn" title="Start Scan">
-      <img src="data:image/png;base64,${base64Icon}" alt="Scan">
-    </button>
-  `;
-  shadow.getElementById('gm-asin-btn').addEventListener('click', scanPage);
-}
-
+    /* ── heartbeat: two quick pulses every 1.2 s ── */
+    @keyframes gm-heartbeat{
+      0%   { transform: scale(1);  }
+      50%  { transform: scale(1.2);}
+      100% { transform: scale(1);  }
+    }
+  </style>
+  <button id="gm-asin-btn" title="Start Scan">search</button>`;
+      shadow.getElementById('gm-asin-btn').addEventListener('click',scanPage);
+    }
     if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',createFloatingButton,{once:true});
     else createFloatingButton();
     new MutationObserver(createFloatingButton).observe(document.documentElement,{childList:true,subtree:true});
