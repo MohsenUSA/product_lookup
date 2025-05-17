@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      4.9
+// @version      5.0
 // @description  Find ASINs & product info, generate QR or Code-128 barcode in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -19,19 +19,30 @@
 (function () {
   'use strict';
 
+  // 1) preconnect
+const p1 = document.createElement('link');
+p1.rel = 'preconnect';
+p1.href = 'https://fonts.googleapis.com';
+document.head.append(p1);
+
+const p2 = document.createElement('link');
+p2.rel = 'preconnect';
+p2.href = 'https://fonts.gstatic.com';
+p2.crossOrigin = 'anonymous';
+document.head.append(p2);
+
+// 2) material symbols with axes & fallback
+const symLink = document.createElement('link');
+symLink.rel = 'stylesheet';
+symLink.crossOrigin = 'anonymous';
+symLink.href =
+  'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=swap';
+document.head.append(symLink);
+
+
   /* ----------------- USER-EDITABLE HOTKEY ----------------- */
   const HOTKEY = { key: 'L', shift: true, ctrl: false, alt: false, meta: false };
 
-  /* -------------- Load icon fonts -------------- */
-  const iconLink = document.createElement('link');
-  iconLink.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
-  iconLink.rel = 'stylesheet';
-  document.head.appendChild(iconLink);
-
-  const symLink = document.createElement('link');
-  symLink.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined';
-  symLink.rel = 'stylesheet';
-  document.head.appendChild(symLink);
 
   /* ------------------------- CONFIG ------------------------ */
   const CONFIG = {
@@ -275,14 +286,13 @@
         if (data.discount) {
           html += `<p class="discount-percentage">Discount: ${data.discount}</p>`;
         }
-        // ── SNAP EBT: only show when the item is NOT out of stock ──
+        // ── SNAP EBT: only show when not out of stock ──
         if (!/out of stock/i.test(data.availability || '')) {
           const snapClass = data.snapEbtStatus.startsWith('SNAP')
             ? 'snap-eligible'
             : 'snap-not-eligible';
           html += `<p class="${snapClass}">${data.snapEbtStatus}</p>`;
         }
-
         if (data.savingsText) {
           html += `<p class="savings-message">Savings: "${data.savingsText}"<br>
             <a href="${data.savingsLink}" target="_blank">Shop deal</a></p>`;
@@ -294,9 +304,7 @@
         if (data.productCategory) extra.push(`<p class="product-category">Product Category / Brand: ${data.productCategory}</p>`);
         if (data.location) extra.push(`<p class="location">Location / Manufacturer: ${data.location}</p>`);
         if (data.upc) {
-            extra.push(
-          `<p class="upc">UPC(s):<br>${data.upc.replace(/\n/g, '<br>')}</p>`
-        );
+          extra.push(`<p class="upc">UPC(s):<br>${data.upc.replace(/\n/g, '<br>')}</p>`);
         }
         if (extra.length) {
           html += `<div class="extra-info">${extra.join('')}</div>`;
@@ -308,13 +316,27 @@
     /* footer */
     html += `<div class="footer">
       <div class="footer-inner">
-        <button id="support-btn"   class="btn support-btn"   title="Support Info"><i class="material-icons">contact_support</i><span class="tooltiptext"></span></button>
-        <button id="barcode-btn"   class="btn barcode-btn"   title="Toggle Barcode / QR"><i class="material-symbols-outlined">barcode_scanner</i><span class="tooltiptext"></span></button>
-        <button id="copy-img-btn"  class="btn copy-img-btn"  title="Copy QR Code Image"><i class="material-icons">qr_code</i><span class="tooltiptext"></span></button>
-        <button id="copy-btn"      class="btn copy-btn"      title="Copy All Product Info"><i class="material-icons">content_copy</i><span class="tooltiptext"></span></button>
-        <button id="copy-asin-btn" class="btn copy-asin-btn" title="Copy ASIN"        style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
-        <button id="copy-all-btn"  class="btn copy-all-btn"  title="Copy All ASINs"   style="display:none;"><i class="material-icons">spellcheck</i><span class="tooltiptext"></span></button>
-        <button id="close-btn-bottom" class="btn close-btn-bottom" title="Close"><i class="material-icons">close</i></button>
+        <button id="support-btn"   class="btn support-btn"   title="Support Info">
+          <i class="material-symbols-outlined">contact_support</i><span class="tooltiptext"></span>
+        </button>
+        <button id="barcode-btn"   class="btn barcode-btn"   title="Toggle Barcode / QR">
+          <i class="material-symbols-outlined">barcode_scanner</i><span class="tooltiptext"></span>
+        </button>
+        <button id="copy-img-btn"  class="btn copy-img-btn"  title="Copy QR Code Image">
+          <i class="material-symbols-outlined">qr_code</i><span class="tooltiptext"></span>
+        </button>
+        <button id="copy-btn"      class="btn copy-btn"      title="Copy All Product Info">
+          <i class="material-symbols-outlined">content_copy</i><span class="tooltiptext"></span>
+        </button>
+        <button id="copy-asin-btn" class="btn copy-asin-btn" title="Copy ASIN"        style="display:none;">
+          <i class="material-symbols-outlined">spellcheck</i><span class="tooltiptext"></span>
+        </button>
+        <button id="copy-all-btn"  class="btn copy-all-btn"  title="Copy All ASINs"   style="display:none;">
+          <i class="material-symbols-outlined">spellcheck</i><span class="tooltiptext"></span>
+        </button>
+        <button id="close-btn-bottom" class="btn close-btn-bottom" title="Close">
+          <i class="material-symbols-outlined">close</i>
+        </button>
       </div></div>
     </div>`;
 
@@ -349,7 +371,7 @@
               engagement_time_msec: 1,
               page_location: location.href,
               page_title: document.title,
-              script_name: 'DAD PLU v4.9'
+              script_name: 'DAD PLU v5.0'
             }
           }
         ]
@@ -410,7 +432,7 @@
       .discount-percentage{color:#cc0c39;font-weight:bold;margin-bottom:6px;}
       .unit-price{color:rgb(75,140,245);margin-bottom:6px;}
       .extra-info p + p {
-       margin-top: 16px;
+        margin-top: 16px;
       }
       .extra-info{
         background:#eef3ff;border-radius:8px;padding:8px 10px;margin-top:10px;
@@ -425,8 +447,8 @@
       .extra-info .location         { color:rgb(249, 164, 7);  margin-bottom:6px; }
       .extra-info .upc              { color:rgb(255, 55, 0); margin-bottom:6px; }
       .upc {
-        margin-top: 1px;   /* spacing before the first UPC */
-        line-height: 2; /* gentle space between UPCs   */
+        margin-top: 1px;
+        line-height: 2;
       }
       /* footer containers */
       .footer{
@@ -456,7 +478,6 @@
       .copy-asin-btn,
       .copy-all-btn{background:#4caf50;color:#fff;}
       .close-btn-bottom{background:#d9534f;color:#fff;}
-      .material-icons,
       .material-symbols-outlined{
         font-size:clamp(18px,5vw,22px);
       }
@@ -473,7 +494,7 @@
         gtag('event','page_view',{
           debug_mode:true,
           page_location:'https://dad.mohajiho.com/popup',
-          page_title:'ASIN Finder Popup'
+          page_title:'DAD PLU Popup'
         });
       <\/script>
     `;
@@ -482,10 +503,9 @@
     doc.write(`<!doctype html><html><head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>ASIN Finder</title>
+      <title>DAD PLU</title>
       ${gaTag}
-      <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"><!-- Symbols for barcode_scanner -->
+      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
       <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/barcodes/JsBarcode.ean-upc.min.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/barcodes/JsBarcode.code128.min.js"></script>
@@ -517,7 +537,7 @@
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v4.9'
+              script_name:'DAD PLU v5.0'
             });
           }
         }
@@ -618,22 +638,27 @@
   if (!window.opener && !/about:blank/i.test(location.href)) {
     function createFloatingButton() {
       if (document.getElementById('gm-asin-host')) return;
-      const host=document.createElement('div');
-      host.id='gm-asin-host';
-      Object.assign(host.style,{all:'initial',position:'fixed',top:0,left:0,width:0,height:0,zIndex:2147483647});
+      const host = document.createElement('div');
+      host.id = 'gm-asin-host';
+      Object.assign(host.style, {
+        all:'initial',
+        position:'fixed', top:0, left:0, width:0, height:0,
+        zIndex:2147483647
+      });
       document.body.appendChild(host);
-      const shadow=host.attachShadow({mode:'closed'});
-      shadow.innerHTML=`
+
+      const shadow = host.attachShadow({mode:'closed'});
+      shadow.innerHTML = `
   <style>
     #gm-asin-btn{
       position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
-      background:#77bc1f;color:#fff;border:none;font-family:'Material Icons';font-size:28px;
+      background:#77bc1f;color:#fff;border:none;font-family:'Material Symbols Outlined';font-size:28px;
       cursor:pointer;display:flex;align-items:center;justify-content:center;
       /* colour-cycle + heartbeat pulse */
       animation:
           gm-color-shift 18s ease-in-out infinite,
-          gm-heartbeat    1.2s ease-in-out infinite;
-      transition:transform .2s;
+          gm-heartbeat    5s ease-in-out infinite;
+      transition:transform .1s;
     }
     #gm-asin-btn:active{transform:scale(.95);}
 
@@ -649,23 +674,41 @@
     }
   </style>
   <button id="gm-asin-btn" title="Start Scan">search</button>`;
-      shadow.getElementById('gm-asin-btn').addEventListener('click',scanPage);
+      shadow.getElementById('gm-asin-btn').addEventListener('click', scanPage);
     }
-    if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',createFloatingButton,{once:true});
-    else createFloatingButton();
-    new MutationObserver(createFloatingButton).observe(document.documentElement,{childList:true,subtree:true});
-    const fire=()=>window.dispatchEvent(new Event('locationchange'));
-    const _ps=history.pushState;history.pushState=function(){_ps.apply(this,arguments);fire();};
-    const _rs=history.replaceState;history.replaceState=function(){_rs.apply(this,arguments);fire();};
-    window.addEventListener('popstate',fire);
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', createFloatingButton, {once:true});
+    } else {
+      createFloatingButton();
+    }
+
+    new MutationObserver(createFloatingButton).observe(document.documentElement, {
+      childList:true, subtree:true
+    });
+
+    // handle single‑page‑app navigation
+    const fire = () => window.dispatchEvent(new Event('locationchange'));
+    const _push = history.pushState;
+    history.pushState = function(){ _push.apply(this, arguments); fire(); };
+    const _replace = history.replaceState;
+    history.replaceState = function(){ _replace.apply(this, arguments); fire(); };
+    window.addEventListener('popstate', fire);
+
+    // hotkey
     function hotkeyMatches(e){
-      return e.key.toLowerCase()===HOTKEY.key.toLowerCase()&&e.shiftKey===HOTKEY.shift&&e.ctrlKey===HOTKEY.ctrl&&e.altKey===HOTKEY.alt&&e.metaKey===HOTKEY.meta;
+      return e.key.toLowerCase() === HOTKEY.key.toLowerCase()
+          && e.shiftKey === HOTKEY.shift
+          && e.ctrlKey === HOTKEY.ctrl
+          && e.altKey === HOTKEY.alt
+          && e.metaKey === HOTKEY.meta;
     }
-    window.addEventListener('keydown',e=>{
-      if(!hotkeyMatches(e))return;
-      const tag=(e.target.tagName||'').toUpperCase();
-      if(e.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(tag))return;
-      e.preventDefault();scanPage();
+    window.addEventListener('keydown', e => {
+      if (!hotkeyMatches(e)) return;
+      const tag = (e.target.tagName||'').toUpperCase();
+      if (e.target.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+      e.preventDefault();
+      scanPage();
     });
   }
 })();
