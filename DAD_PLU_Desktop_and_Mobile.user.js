@@ -198,17 +198,49 @@ document.head.append(symLink);
       }
     } catch {}
 
-    /* --------- extra fields --------- */
-    let productType = '';
-    const stateEl = document.querySelector(
-      'script[type="a-state"][data-a-state*="voyager-desktop-context"]'
-    );
-    if (stateEl && stateEl.textContent) {
-      try {
-        const obj = JSON.parse(stateEl.textContent.trim());
-        if (obj.product_type) productType = obj.product_type;
-      } catch {}
+     // ── Product Type: try JSON first, then detail‑table, then inline JS snippet ──
+     let productType = '';
+     // 1) JSON blob (desktop UI)
+     const stateEl = document.querySelector(
+       'script[type="a-state"][data-a-state*="voyager-desktop-context"]'
+     );
+     if (stateEl && stateEl.textContent) {
+       try {
+         const obj = JSON.parse(stateEl.textContent.trim());
+         if (obj.product_type) productType = obj.product_type;
+       } catch {}
+     }
+     // 2) detail‑table fallback (mobile UI)
+     if (!productType) {
+       productType = getDetailValue('Product Type');
+     }
+    // 3) “page-refresh-data” URL‑param fallback (mobile search result → product pages)
+    if (!productType) {
+      const refreshEl = document.querySelector(
+        'script[type="a-state"][data-a-state*="page-refresh-data"]'
+      );
+      if (refreshEl && refreshEl.textContent) {
+        try {
+          const obj2 = JSON.parse(refreshEl.textContent.trim());
+          // strip leading '&' so URLSearchParams works
+          const params = obj2.pageRefreshUrlParams.replace(/^&/, '');
+          const up = new URLSearchParams(params);
+          const def = up.get('productTypeDefinition');
+          if (def) productType = def;
+        } catch {}
+      }
     }
+     // 4) inline JS fallback (csa Events or metrics snippet)
+     if (!productType) {
+       const scripts = document.querySelectorAll('script');
+       for (const s of scripts) {
+         const m = s.textContent.match(/productType\s*:\s*['"]([^'"]+)['"]/);
+         if (m) {
+           productType = m[1];
+           break;
+         }
+       }
+     }
 
     const productCategory =
       getDetailValue('Product Category') ||
