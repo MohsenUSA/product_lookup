@@ -668,83 +668,95 @@ document.head.append(symLink);
 
   /* -------- floating scan button + hotkey -------- */
   if (!window.opener && !/about:blank/i.test(location.href)) {
-    function createFloatingButton() {
-      if (document.getElementById('gm-asin-host')) return;
-      const host = document.createElement('div');
-      host.id = 'gm-asin-host';
-      Object.assign(host.style, {
-        all:'initial',
-        position:'fixed', top:0, left:0, width:0, height:0,
-        zIndex:2147483647
-      });
-      document.body.appendChild(host);
+function createFloatingButton() {
+  if (document.getElementById('gm-asin-host')) return;
+  const host = document.createElement('div');
+  host.id = 'gm-asin-host';
+  Object.assign(host.style, {
+    all: 'initial',
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    width: '48px',
+    height: '48px',
+    zIndex: 2147483647
+  });
+  document.body.appendChild(host);
 
-      const shadow = host.attachShadow({mode:'closed'});
-      shadow.innerHTML = `
-  <style>
-    #gm-asin-btn{
-      position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;
-      background:#77bc1f;color:#fff;border:none;font-family:'Material Symbols Outlined';font-size:28px;
-      cursor:pointer;display:flex;align-items:center;justify-content:center;
-      /* colour-cycle + heartbeat pulse */
-      animation:
+  const shadow = host.attachShadow({ mode: 'closed' });
+  shadow.innerHTML = `
+    <style>
+      /* 1) circle + animations */
+      #gm-asin-btn {
+        all: unset;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        background: #77bc1f;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+        color: #fff;                /* icon = white */
+        transform-origin: center;
+        transition: transform .1s;
+        animation:
           gm-color-shift 18s ease-in-out infinite,
-          gm-heartbeat    5s ease-in-out infinite;
-      transition:transform .1s;
-    }
-    #gm-asin-btn:active{transform:scale(.95);}
+          gm-heartbeat    5s  ease-in-out infinite;
+      }
+      @keyframes gm-color-shift {
+        0%   { background: #77bc1f; }
+        33%  { background: #00a8e1; }
+        66%  { background: #ffa700; }
+        100% { background: #77bc1f; }
+      }
+      @keyframes gm-heartbeat {
+        0%   { transform: scale(1);   }
+        50%  { transform: scale(1.2); }
+        100% { transform: scale(1);   }
+      }
 
-    @keyframes gm-color-shift{
-      0%{background:#77bc1f;}33%{background:#00a8e1;}66%{background:#ffa700;}100%{background:#77bc1f;}
-    }
+      /* Clip any overflow so the stroke doesn’t peek out */
+      #gm-asin-btn {
+        overflow: hidden;
+      }
 
-    /* ── heartbeat: two quick pulses every 1.2 s ── */
-    @keyframes gm-heartbeat{
-      0%   { transform: scale(1);  }
-      50%  { transform: scale(1.2);}
-      100% { transform: scale(1);  }
-    }
+      /* bump up the size + center the lens */
+      #gm-asin-btn svg {
+        width: 55%;                   /* make the starting box smaller */
+        height: 55%;
+        transform: translateY(6%)     /* keep your vertical tweak */
+                  scale(1.15);        /* enlarge the whole icon 15% */
+        transform-origin: center;
+        display: block;
+      }
+      #gm-asin-btn svg path {
+        fill: currentColor;           /* keep it solid white */
+      }
+    </style>
+        <button id="gm-asin-btn" title="Start Scan">
+          <svg
+            aria-hidden="true" focusable="false"
+            viewBox="0 0 512 512"
+            preserveAspectRatio="xMidYMid meet"
+            fill="currentColor"
+          >
+            <path d="M505 442.7l-99.7-99.7C429.3 312.1 448 265.3
+              448 212c0-117-95-212-212-212S24 95 24 212s95 212
+              212 212c53.3 0 100.1-18.7 131-49.7l99.7 99.7c4.5
+              4.5 10.6 7 17 7s12.5-2.5 17-7c9.4-9.4 9.4-24.6
+              0-34zM236 360c-82.8 0-150-67.2-150-150S153.2 60
+              236 60s150 67.2 150 150-67.2 150-150 150z"/>
+          </svg>
+        </button>
+  `;
 
-    /* Font‑Awesome–style magnifier */
-.fa-solid {
-  display: inline-block;
-  font-style: normal;
-  line-height: 1;
-}
-.fa-magnifying-glass {
-  position: relative;
-  width: 1em;
-  height: 1em;
-  border: 0.125em solid currentColor;
-  border-radius: 50%;
-  box-sizing: border-box;
-}
-.fa-magnifying-glass::after {
-  content: "";
-  position: absolute;
-  width: 0.25em;
-  height: 0.6em;
-  background: currentColor;
-  bottom: -0.2em;
-  right: -0.2em;
-  transform: rotate(45deg);
-  transform-origin: 0 0;
-}
-
-  </style>
-<button id="gm-asin-btn" title="Start Scan">
-  <svg
-    aria-hidden="true"
-    focusable="false"
-    width="1em" height="1em"
-    viewBox="0 0 512 512"
-    fill="currentColor"
-  >
-    <path d="M505 442.7l-99.7-99.7C429.3 312.1 448 265.3 448 212 448 95 353 0 236 0S24 95 24 212s95 212 212 212c53.3 0 100.1-18.7 131-49.7l99.7 99.7c4.5 4.5 10.6 7 17 7s12.5-2.5 17-7c9.4-9.4 9.4-24.6 0-34zM236 360c-82.8 0-150-67.2-150-150S153.2 60 236 60s150 67.2 150 150-67.2 150-150 150z"/>
-  </svg>
-</button>`;
-      shadow.getElementById('gm-asin-btn').addEventListener('click', scanPage);
-    }
+  shadow
+    .getElementById('gm-asin-btn')
+    .addEventListener('click', scanPage);
+  }
 
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', createFloatingButton, {once:true});
