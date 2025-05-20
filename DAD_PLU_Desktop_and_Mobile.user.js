@@ -2,7 +2,7 @@
 // @name         DAD PLU (Desktop & Mobile) GA + HotKey
 // @namespace    https://dad.mohajiho.com/
 // @author       Mohsen Hajihosseinnejad * alias: MOHAJIHO * email: mohajiho@gmail.com
-// @version      5.0
+// @version      5.5
 // @description  Find ASINs & product info, generate QR or Code-128 barcode in a popup, send GA4 events, and trigger scan with a configurable keyboard shortcut.
 // @match        *://*.amazon.com/*
 // @match        *://*.amazon.*/*
@@ -403,7 +403,7 @@ document.head.append(symLink);
               engagement_time_msec: 1,
               page_location: location.href,
               page_title: document.title,
-              script_name: 'DAD PLU v5.0'
+              script_name: 'DAD PLU v5.5'
             }
           }
         ]
@@ -569,7 +569,7 @@ document.head.append(symLink);
             gtag('event', btn, {
               debug_mode:true,
               page_location:'https://dad.mohajiho.com/popup',
-              script_name:'DAD PLU v5.0'
+              script_name:'DAD PLU v5.5'
             });
           }
         }
@@ -704,8 +704,45 @@ document.head.append(symLink);
       50%  { transform: scale(1.2);}
       100% { transform: scale(1);  }
     }
+
+    /* Font‑Awesome–style magnifier */
+.fa-solid {
+  display: inline-block;
+  font-style: normal;
+  line-height: 1;
+}
+.fa-magnifying-glass {
+  position: relative;
+  width: 1em;
+  height: 1em;
+  border: 0.125em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.fa-magnifying-glass::after {
+  content: "";
+  position: absolute;
+  width: 0.25em;
+  height: 0.6em;
+  background: currentColor;
+  bottom: -0.2em;
+  right: -0.2em;
+  transform: rotate(45deg);
+  transform-origin: 0 0;
+}
+
   </style>
-  <button id="gm-asin-btn" title="Start Scan">search</button>`;
+<button id="gm-asin-btn" title="Start Scan">
+  <svg
+    aria-hidden="true"
+    focusable="false"
+    width="1em" height="1em"
+    viewBox="0 0 512 512"
+    fill="currentColor"
+  >
+    <path d="M505 442.7l-99.7-99.7C429.3 312.1 448 265.3 448 212 448 95 353 0 236 0S24 95 24 212s95 212 212 212c53.3 0 100.1-18.7 131-49.7l99.7 99.7c4.5 4.5 10.6 7 17 7s12.5-2.5 17-7c9.4-9.4 9.4-24.6 0-34zM236 360c-82.8 0-150-67.2-150-150S153.2 60 236 60s150 67.2 150 150-67.2 150-150 150z"/>
+  </svg>
+</button>`;
       shadow.getElementById('gm-asin-btn').addEventListener('click', scanPage);
     }
 
